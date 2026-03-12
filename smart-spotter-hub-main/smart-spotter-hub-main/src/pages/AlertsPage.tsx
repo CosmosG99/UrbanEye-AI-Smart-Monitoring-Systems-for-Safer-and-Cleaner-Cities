@@ -68,6 +68,7 @@ export default function AlertsPage() {
               ) : (
                 <span className="shrink-0 text-[10px] text-success font-semibold uppercase">Resolved</span>
               )}
+            
             </div>
           );
         })}

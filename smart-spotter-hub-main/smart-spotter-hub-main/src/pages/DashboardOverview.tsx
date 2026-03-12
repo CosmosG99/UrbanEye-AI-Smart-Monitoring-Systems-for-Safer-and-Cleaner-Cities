@@ -68,6 +68,8 @@ export default function DashboardOverview() {
                 <p className="text-xs text-muted-foreground mt-1">{alert.locationName} • {alert.timestamp}</p>
               </div>
               {alert.resolved && <span className="text-[10px] text-success uppercase font-semibold shrink-0">Resolved</span>}
+              
+              
             </div>
           ))}
         </div>
