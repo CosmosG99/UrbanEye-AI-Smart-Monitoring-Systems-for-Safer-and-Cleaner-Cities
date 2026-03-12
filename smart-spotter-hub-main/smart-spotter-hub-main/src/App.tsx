@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import DashboardLayout from "@/components/DashboardLayout";
+import { DetectionProvider } from "@/context/DetectionContext";
 import LandingPage from "./pages/LandingPage";
 import DashboardOverview from "./pages/DashboardOverview";
 import LiveMonitoring from "./pages/LiveMonitoring";
@@ -25,23 +26,25 @@ function DashboardWrapper({ children }: { children: React.ReactNode }) {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/dashboard" element={<DashboardWrapper><DashboardOverview /></DashboardWrapper>} />
-          <Route path="/monitoring" element={<DashboardWrapper><LiveMonitoring /></DashboardWrapper>} />
-          <Route path="/predictions" element={<DashboardWrapper><PredictionDashboard /></DashboardWrapper>} />
-          <Route path="/map" element={<DashboardWrapper><SmartMap /></DashboardWrapper>} />
-          <Route path="/alerts" element={<DashboardWrapper><AlertsPage /></DashboardWrapper>} />
-          <Route path="/safety" element={<DashboardWrapper><SafetyMonitoring /></DashboardWrapper>} />
-          <Route path="/analytics" element={<DashboardWrapper><AnalyticsDashboard /></DashboardWrapper>} />
-          <Route path="/admin" element={<DashboardWrapper><AdminPanel /></DashboardWrapper>} />
-          <Route path="/about" element={<DashboardWrapper><AboutPage /></DashboardWrapper>} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <DetectionProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/dashboard" element={<DashboardWrapper><DashboardOverview /></DashboardWrapper>} />
+            <Route path="/monitoring" element={<DashboardWrapper><LiveMonitoring /></DashboardWrapper>} />
+            <Route path="/predictions" element={<DashboardWrapper><PredictionDashboard /></DashboardWrapper>} />
+            <Route path="/map" element={<DashboardWrapper><SmartMap /></DashboardWrapper>} />
+            <Route path="/alerts" element={<DashboardWrapper><AlertsPage /></DashboardWrapper>} />
+            <Route path="/safety" element={<DashboardWrapper><SafetyMonitoring /></DashboardWrapper>} />
+            <Route path="/analytics" element={<DashboardWrapper><AnalyticsDashboard /></DashboardWrapper>} />
+            <Route path="/admin" element={<DashboardWrapper><AdminPanel /></DashboardWrapper>} />
+            <Route path="/about" element={<DashboardWrapper><AboutPage /></DashboardWrapper>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </DetectionProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

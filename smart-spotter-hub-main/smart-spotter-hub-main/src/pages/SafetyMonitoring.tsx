@@ -1,9 +1,19 @@
 import { Shield, Droplets, AlertTriangle, CheckCircle } from "lucide-react";
 import { locations } from "@/data/mockData";
 import StatCard from "@/components/StatCard";
+import { useDetections } from "@/context/DetectionContext";
 
 export default function SafetyMonitoring() {
-  const avgCleanliness = Math.round(locations.reduce((s, l) => s + l.cleanlinessScore, 0) / locations.length);
+  const { events } = useDetections();
+
+  const litterEvents = events.filter((e) => e.litterCount >= 1);
+  const crowdEvents = events.filter((e) => e.crowdLevel !== "LOW");
+
+  const cleanlinessPenalty = Math.min(litterEvents.length * 5, 40); // cap at -40%
+  const baseCleanliness = Math.round(locations.reduce((s, l) => s + l.cleanlinessScore, 0) / locations.length);
+  const dynamicCleanliness = Math.max(0, baseCleanliness - cleanlinessPenalty);
+
+  const safetyIncidents = litterEvents.length + crowdEvents.length;
 
   return (
     <div className="space-y-6">
@@ -13,8 +23,8 @@ export default function SafetyMonitoring() {
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Avg Cleanliness" value={`${avgCleanliness}%`} icon={Droplets} iconColor="text-info" />
-        <StatCard title="Safety Incidents" value="2" change="Today" changeType="neutral" icon={AlertTriangle} iconColor="text-warning" />
+        <StatCard title="Avg Cleanliness" value={`${dynamicCleanliness}%`} icon={Droplets} iconColor="text-info" />
+        <StatCard title="Safety Incidents" value={String(safetyIncidents)} change="Today" changeType="neutral" icon={AlertTriangle} iconColor="text-warning" />
         <StatCard title="Zones Monitored" value="12" icon={Shield} iconColor="text-success" />
         <StatCard title="Compliance Rate" value="96%" icon={CheckCircle} iconColor="text-success" />
       </div>

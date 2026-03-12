@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Users, Activity, Maximize2 } from "lucide-react";
 import CrowdLevelBadge from "@/components/CrowdLevelBadge";
+import { useDetections } from "@/context/DetectionContext";
+import { toast } from "@/components/ui/sonner";
 
 const cameras = [
   { id: 1, name: "Marina Beach - North", count: 847, level: "high" as const, fps: 30 },
@@ -14,6 +16,7 @@ const cameras = [
 type CrowdLevelUi = "low" | "medium" | "high";
 
 export default function LiveMonitoring() {
+  const { pushEvent } = useDetections();
   const [activeCamera, setActiveCamera] = useState(0);
   const [peopleCount, setPeopleCount] = useState<number>(0);
   const [litterCount, setLitterCount] = useState<number>(0);
@@ -94,9 +97,35 @@ export default function LiveMonitoring() {
         const l = Number(data?.litterCount ?? 0);
         const levelRaw = String(data?.crowdLevel ?? "LOW").toUpperCase();
 
+        const uiLevel: CrowdLevelUi = levelRaw === "HIGH" ? "high" : levelRaw === "MEDIUM" ? "medium" : "low";
+
         setPeopleCount(p);
         setLitterCount(l);
-        setCrowdLevel(levelRaw === "HIGH" ? "high" : levelRaw === "MEDIUM" ? "medium" : "low");
+        setCrowdLevel(uiLevel);
+
+        // Push event into global store
+        pushEvent({
+          cameraId: String(cam.id),
+          cameraName: cam.name,
+          peopleCount: p,
+          litterCount: l,
+          crowdLevel: levelRaw as any,
+        });
+
+        // Alerts: litter or any person detected with elevated crowd
+        if (l >= 1) {
+          toast("Litter detected", {
+            description: `${l} item(s) detected at ${cam.name}`,
+            position: "top-left",
+          });
+        }
+        if (p >= 1 && levelRaw !== "LOW") {
+          toast("High crowd level", {
+            description: `Crowd level ${levelRaw} at ${cam.name}`,
+            position: "top-left",
+          });
+        }
+
         setError("");
       } catch (e: any) {
         setError(e?.message || "Detection error");

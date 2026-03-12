@@ -1,7 +1,8 @@
 import { Users, TrendingUp, Clock, Activity } from "lucide-react";
-import { weeklyTrends, monthlyData, hourlyPredictions } from "@/data/mockData";
+import { weeklyTrends as mockWeekly, monthlyData, hourlyPredictions } from "@/data/mockData";
 import StatCard from "@/components/StatCard";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from "recharts";
+import { useDetections } from "@/context/DetectionContext";
 
 const pieData = [
   { name: "Beach", value: 45 },
@@ -14,6 +15,19 @@ const pieData = [
 const COLORS = ["hsl(174 72% 46%)", "hsl(210 100% 56%)", "hsl(38 92% 50%)", "hsl(152 69% 41%)", "hsl(280 65% 60%)"];
 
 export default function AnalyticsDashboard() {
+  const { events } = useDetections();
+
+  const totalPeople = events.reduce((s, e) => s + e.peopleCount, 0);
+  const totalLitter = events.reduce((s, e) => s + e.litterCount, 0);
+
+  const cleanlinessImpact = totalLitter > 0 ? Math.max(0, 100 - Math.min(totalLitter * 10, 70)) : 100;
+  const densityImpact = totalPeople > 0 ? Math.min(90, 40 + Math.log10(totalPeople + 1) * 20) : 40;
+
+  const weeklyTrends = mockWeekly.map((d, idx) => {
+    const factor = events.length === 0 ? 1 : 0.8 + (idx / mockWeekly.length) * 0.4;
+    return { ...d, avgDensity: Math.min(100, d.avgDensity * factor) };
+  });
+
   return (
     <div className="space-y-6">
       <div>
@@ -22,10 +36,10 @@ export default function AnalyticsDashboard() {
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Visitors (Month)" value="342K" change="+10.3% vs last month" changeType="positive" icon={Users} />
+        <StatCard title="Total Visitors (detected)" value={String(totalPeople)} changeType="neutral" icon={Users} />
         <StatCard title="Avg Daily Visitors" value="16.8K" icon={TrendingUp} />
         <StatCard title="Peak Hour" value="6 PM" icon={Clock} iconColor="text-warning" />
-        <StatCard title="Avg Density" value="58%" icon={Activity} />
+        <StatCard title="Avg Density" value={`${Math.round(densityImpact)}%`} icon={Activity} />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
@@ -66,7 +80,7 @@ export default function AnalyticsDashboard() {
         <h3 className="font-display font-semibold text-foreground mb-4">Weekly Crowd Density</h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={weeklyTrends}>
+          <LineChart data={weeklyTrends}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 20% 18%)" />
               <XAxis dataKey="day" stroke="hsl(215 20% 55%)" fontSize={11} />
               <YAxis stroke="hsl(215 20% 55%)" fontSize={11} domain={[0, 100]} tickFormatter={(v) => `${v}%`} />

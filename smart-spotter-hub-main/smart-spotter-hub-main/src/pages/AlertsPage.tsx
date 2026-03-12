@@ -1,9 +1,30 @@
-import { alerts } from "@/data/mockData";
+import { alerts as mockAlerts } from "@/data/mockData";
 import { Bell, AlertTriangle, Shield, Trash2, Check } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useDetections } from "@/context/DetectionContext";
 
 export default function AlertsPage() {
-  const [items, setItems] = useState(alerts);
+  const { events } = useDetections();
+  const [items, setItems] = useState(mockAlerts);
+
+  const liveAlerts = useMemo(
+    () =>
+      events.slice(0, 20).map((e) => ({
+        id: e.id,
+        type: e.litterCount >= 1 ? "cleanliness" : "crowd" as const,
+        severity: e.crowdLevel === "HIGH" || e.litterCount >= 3 ? "high" as const : e.crowdLevel === "MEDIUM" ? "medium" as const : "low" as const,
+        message:
+          e.litterCount >= 1
+            ? `${e.litterCount} litter item(s) detected at ${e.cameraName}`
+            : `Crowd level ${e.crowdLevel} at ${e.cameraName}`,
+        locationName: e.cameraName,
+        timestamp: new Date(e.timestamp).toLocaleTimeString(),
+        resolved: false,
+      })),
+    [events]
+  );
+
+  const allAlerts = [...liveAlerts, ...items];
 
   const resolve = (id: string) => {
     setItems((prev) => prev.map((a) => (a.id === id ? { ...a, resolved: true } : a)));
@@ -21,12 +42,12 @@ export default function AlertsPage() {
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-warning/10">
           <Bell className="w-4 h-4 text-warning" />
-          <span className="text-xs font-semibold text-warning">{items.filter((a) => !a.resolved).length} Active</span>
+          <span className="text-xs font-semibold text-warning">{allAlerts.filter((a) => !a.resolved).length} Active</span>
         </div>
       </div>
 
       <div className="space-y-3">
-        {items.map((alert) => {
+        {allAlerts.map((alert) => {
           const Icon = typeIcon[alert.type];
           return (
             <div key={alert.id} className={`glass-card p-4 flex items-start gap-4 transition-opacity ${alert.resolved ? "opacity-50" : ""}`}>
