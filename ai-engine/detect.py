@@ -59,7 +59,7 @@ def run_on_image(model, image_path, json_only=False):
 
     payload = {
         "people_count": int(people_count),
-        "litter_count": int(litter_count),
+        "litter": int(litter_count),
         "crowd_level": crowd_level,
     }
 
@@ -93,7 +93,7 @@ def run_webcam(model, camera_index=0, json_only=False):
         if json_only:
             print(json.dumps({
                 "people_count": people_count,
-                "litter_count": litter_count,
+                "litter": litter_count,
                 "crowd_level": crowd_level
             }))
             return

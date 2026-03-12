@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo, useState } from "react";
+import { toast } from "@/components/ui/sonner";
 
 type CrowdLevel = "LOW" | "MEDIUM" | "HIGH";
 
@@ -32,6 +33,20 @@ export function DetectionProvider({ children }: { children: React.ReactNode }) {
             id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
             timestamp: new Date().toISOString(),
           };
+
+          if (next.litterCount >= 1) {
+            toast("Litter detected", {
+              description: `${next.litterCount} item(s) detected at ${next.cameraName}`,
+              position: "top-left",
+            });
+          }
+          if (next.peopleCount >= 1 && next.crowdLevel !== "LOW") {
+            toast("High crowd level", {
+              description: `Crowd level ${next.crowdLevel} at ${next.cameraName}`,
+              position: "top-left",
+            });
+          }
+
           return [next, ...prev].slice(0, 200);
         });
       },

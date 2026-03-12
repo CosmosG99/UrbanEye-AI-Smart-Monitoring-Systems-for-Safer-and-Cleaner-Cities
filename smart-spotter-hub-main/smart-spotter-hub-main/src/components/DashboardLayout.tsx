@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Eye, BarChart3, Map, Bell, Shield, LayoutDashboard,
-  Settings, Info, Menu, X, Activity, Users
+  Settings, Info, Menu, X, Activity, Users, Flag
 } from "lucide-react";
 
 const navItems = [
@@ -12,6 +12,7 @@ const navItems = [
   { path: "/map", label: "Smart Map", icon: Map },
   { path: "/alerts", label: "Alerts", icon: Bell },
   { path: "/safety", label: "Safety", icon: Shield },
+  { path: "/safety-report", label: "Safety Report", icon: Flag },
   { path: "/analytics", label: "Analytics", icon: Activity },
   { path: "/admin", label: "Admin", icon: Settings },
   { path: "/about", label: "About", icon: Info },

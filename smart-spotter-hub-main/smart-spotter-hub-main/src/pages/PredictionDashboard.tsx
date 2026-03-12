@@ -1,10 +1,67 @@
+import { useEffect, useMemo, useState } from "react";
 import { locations, hourlyPredictions } from "@/data/mockData";
 import CrowdLevelBadge from "@/components/CrowdLevelBadge";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, AreaChart, Area } from "recharts";
 import { Brain, TrendingUp, Clock, Target } from "lucide-react";
 import StatCard from "@/components/StatCard";
 
+type AnalyticsSummary = {
+  date: string;
+  peakHour: number | null;
+  predictedMax: number;
+  modelAccuracyPercent: number | null;
+};
+
 export default function PredictionDashboard() {
+  const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+
+  const apiBaseUrl = useMemo(() => {
+    const fromEnv = (import.meta as any)?.env?.VITE_API_BASE_URL as string | undefined;
+    return (fromEnv || "http://localhost:5000").replace(/\/$/, "");
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSummary() {
+      try {
+        const res = await fetch(`${apiBaseUrl}/api/analytics/summary`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) {
+          setSummary({
+            date: data.date,
+            peakHour: data.peakHour ?? null,
+            predictedMax: data.predictedMax ?? 0,
+            modelAccuracyPercent: data.modelAccuracyPercent ?? null,
+          });
+        }
+      } catch {
+        // ignore – keep mock metrics if backend not available
+      }
+    }
+
+    loadSummary();
+    const id = window.setInterval(loadSummary, 30_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [apiBaseUrl]);
+
+  const peakHourLabel = useMemo(() => {
+    if (summary?.peakHour == null) return "—";
+    const hour = summary.peakHour;
+    const period = hour >= 12 ? "PM" : "AM";
+    const hour12 = ((hour + 11) % 12) + 1;
+    return `${hour12} ${period}`;
+  }, [summary?.peakHour]);
+
+  const modelAccuracyLabel =
+    summary?.modelAccuracyPercent != null ? `${summary.modelAccuracyPercent.toFixed(1)}%` : "—";
+
+  const predictedMaxLabel = summary?.predictedMax ? summary.predictedMax.toLocaleString() : "—";
+
   return (
     <div className="space-y-6">
       <div>
@@ -13,9 +70,9 @@ export default function PredictionDashboard() {
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Model Accuracy" value="94.2%" change="+1.3% this week" changeType="positive" icon={Target} />
-        <StatCard title="Peak Hour Today" value="6 PM" icon={Clock} iconColor="text-warning" />
-        <StatCard title="Predicted Max" value="2,450" icon={TrendingUp} />
+        <StatCard title="Model Accuracy" value={modelAccuracyLabel} changeType="positive" icon={Target} />
+        <StatCard title="Peak Hour Today" value={peakHourLabel} icon={Clock} iconColor="text-warning" />
+        <StatCard title="Predicted Max (today)" value={predictedMaxLabel} icon={TrendingUp} />
         <StatCard title="AI Model" value="LSTM v3" icon={Brain} iconColor="text-info" />
       </div>
 

@@ -33,12 +33,20 @@ export default function LandingPage() {
             <a href="#stats" className="hover:text-foreground transition-colors">Stats</a>
             <a href="#tech" className="hover:text-foreground transition-colors">Technology</a>
           </div>
-          <Link
-            to="/dashboard"
-            className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors"
-          >
-            Open Dashboard
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/login"
+              className="px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            >
+              Log in
+            </Link>
+            <Link
+              to="/signup"
+              className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors"
+            >
+              Get started
+            </Link>
+          </div>
         </div>
       </nav>
 
@@ -64,7 +72,7 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-wrap gap-4 mt-8">
               <Link
-                to="/monitoring"
+                to="/login"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-all glow-primary"
               >
                 View Live Dashboard
@@ -147,13 +155,21 @@ export default function LandingPage() {
           <p className="text-muted-foreground mt-3 max-w-lg mx-auto">
             Explore the live dashboard and see AI-powered crowd monitoring in action.
           </p>
-          <Link
-            to="/dashboard"
-            className="inline-flex items-center gap-2 mt-8 px-8 py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-all glow-primary"
-          >
-            Launch Dashboard
-            <ArrowRight className="w-4 h-4" />
-          </Link>
+          <div className="flex justify-center gap-3 mt-6">
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-2 px-7 py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-all glow-primary"
+            >
+              Log in
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+            <Link
+              to="/signup"
+              className="inline-flex items-center gap-2 px-7 py-3 rounded-lg border border-border text-foreground font-semibold hover:bg-secondary transition-colors"
+            >
+              Sign up
+            </Link>
+          </div>
         </div>
       </section>
 

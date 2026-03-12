@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Users, Activity, Maximize2 } from "lucide-react";
 import CrowdLevelBadge from "@/components/CrowdLevelBadge";
 import { useDetections } from "@/context/DetectionContext";
-import { toast } from "@/components/ui/sonner";
 
 const cameras = [
   { id: 1, name: "Marina Beach - North", count: 847, level: "high" as const, fps: 30 },
@@ -103,7 +102,7 @@ export default function LiveMonitoring() {
         setLitterCount(l);
         setCrowdLevel(uiLevel);
 
-        // Push event into global store
+        // Push event into global store (triggers global toasts)
         pushEvent({
           cameraId: String(cam.id),
           cameraName: cam.name,
@@ -111,20 +110,6 @@ export default function LiveMonitoring() {
           litterCount: l,
           crowdLevel: levelRaw as any,
         });
-
-        // Alerts: litter or any person detected with elevated crowd
-        if (l >= 1) {
-          toast("Litter detected", {
-            description: `${l} item(s) detected at ${cam.name}`,
-            position: "top-left",
-          });
-        }
-        if (p >= 1 && levelRaw !== "LOW") {
-          toast("High crowd level", {
-            description: `Crowd level ${levelRaw} at ${cam.name}`,
-            position: "top-left",
-          });
-        }
 
         setError("");
       } catch (e: any) {

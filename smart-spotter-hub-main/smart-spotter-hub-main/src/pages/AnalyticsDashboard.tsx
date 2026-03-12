@@ -1,5 +1,6 @@
+import { useEffect, useMemo, useState } from "react";
 import { Users, TrendingUp, Clock, Activity } from "lucide-react";
-import { weeklyTrends as mockWeekly, monthlyData, hourlyPredictions } from "@/data/mockData";
+import { weeklyTrends as mockWeekly, monthlyData } from "@/data/mockData";
 import StatCard from "@/components/StatCard";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { useDetections } from "@/context/DetectionContext";
@@ -17,11 +18,71 @@ const COLORS = ["hsl(174 72% 46%)", "hsl(210 100% 56%)", "hsl(38 92% 50%)", "hsl
 export default function AnalyticsDashboard() {
   const { events } = useDetections();
 
-  const totalPeople = events.reduce((s, e) => s + e.peopleCount, 0);
-  const totalLitter = events.reduce((s, e) => s + e.litterCount, 0);
+  const [summary, setSummary] = useState<{
+    date: string;
+    totalPeople: number;
+    totalLitter: number;
+    totalDetections: number;
+    avgVisitorsPerDetection: number;
+    cleanlinessScore: number;
+    peakHour: number | null;
+  } | null>(null);
 
-  const cleanlinessImpact = totalLitter > 0 ? Math.max(0, 100 - Math.min(totalLitter * 10, 70)) : 100;
+  const apiBaseUrl = useMemo(() => {
+    const fromEnv = (import.meta as any)?.env?.VITE_API_BASE_URL as string | undefined;
+    return (fromEnv || "http://localhost:5000").replace(/\/$/, "");
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSummary() {
+      try {
+        const res = await fetch(`${apiBaseUrl}/api/analytics/summary`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) {
+          setSummary({
+            date: data.date,
+            totalPeople: data.totalPeople ?? 0,
+            totalLitter: data.totalLitter ?? 0,
+            totalDetections: data.totalDetections ?? 0,
+            avgVisitorsPerDetection: data.avgVisitorsPerDetection ?? 0,
+            cleanlinessScore: data.cleanlinessScore ?? 100,
+            peakHour: data.peakHour ?? null,
+          });
+        }
+      } catch {
+        // ignore – keep mock metrics if backend not available
+      }
+    }
+
+    loadSummary();
+    const id = window.setInterval(loadSummary, 30_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [apiBaseUrl]);
+
+  const totalPeople = summary?.totalPeople ?? events.reduce((s, e) => s + e.peopleCount, 0);
+  const totalLitter = summary?.totalLitter ?? events.reduce((s, e) => s + e.litterCount, 0);
+
   const densityImpact = totalPeople > 0 ? Math.min(90, 40 + Math.log10(totalPeople + 1) * 20) : 40;
+
+  const avgVisitors = summary?.avgVisitorsPerDetection
+    ? Math.round(summary.avgVisitorsPerDetection)
+    : totalPeople && events.length
+      ? Math.round(totalPeople / events.length)
+      : 0;
+
+  const peakHourLabel = useMemo(() => {
+    if (summary?.peakHour == null) return "—";
+    const hour = summary.peakHour;
+    const period = hour >= 12 ? "PM" : "AM";
+    const hour12 = ((hour + 11) % 12) + 1;
+    return `${hour12} ${period}`;
+  }, [summary?.peakHour]);
 
   const weeklyTrends = mockWeekly.map((d, idx) => {
     const factor = events.length === 0 ? 1 : 0.8 + (idx / mockWeekly.length) * 0.4;
@@ -36,9 +97,9 @@ export default function AnalyticsDashboard() {
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Visitors (detected)" value={String(totalPeople)} changeType="neutral" icon={Users} />
-        <StatCard title="Avg Daily Visitors" value="16.8K" icon={TrendingUp} />
-        <StatCard title="Peak Hour" value="6 PM" icon={Clock} iconColor="text-warning" />
+        <StatCard title="Total Visitors (today)" value={String(totalPeople)} changeType="neutral" icon={Users} />
+        <StatCard title="Avg Visitors / detection" value={String(avgVisitors)} icon={TrendingUp} />
+        <StatCard title="Peak Hour (today)" value={peakHourLabel} icon={Clock} iconColor="text-warning" />
         <StatCard title="Avg Density" value={`${Math.round(densityImpact)}%`} icon={Activity} />
       </div>
 
