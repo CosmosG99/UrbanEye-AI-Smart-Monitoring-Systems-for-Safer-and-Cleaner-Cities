@@ -3,7 +3,11 @@ const cors = require("cors")
 const fs = require("fs")
 const { spawn } = require("child_process")
 const path = require("path")
+const mongoose = require("mongoose");
 
+mongoose.connect("mongodb+srv://Amey:Amey123@cluster0.auz1tpe.mongodb.net/?appName=Cluster0")
+.then(()=>console.log("MongoDB Connected Sucessfully"))
+.catch(err=>console.log(err));
 const app = express()
 
 app.use(cors())
@@ -92,3 +96,24 @@ app.post("/api/detect/frame", async (req, res) => {
 app.listen(5000, () => {
   console.log("UrbanEye backend running on port 5000")
 })
+
+const detectionSchema = new mongoose.Schema({
+    people_count: Number,
+    litter: Number,
+    crowd_level: String,
+    timestamp: {
+        type: Date,
+        default: Date.now
+    }
+});
+
+const Detection = mongoose.model("Detection", detectionSchema);
+
+app.post("/crowd", async (req,res)=>{
+
+  const data = new Detection(req.body);
+
+  await data.save();
+
+  res.json({message:"Data stored successfully"});
+});
