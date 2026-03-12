@@ -1,26 +1,94 @@
 const express = require("express")
 const cors = require("cors")
+const fs = require("fs")
+const { spawn } = require("child_process")
+const path = require("path")
 
 const app = express()
 
 app.use(cors())
-app.use(express.json())
+app.use(express.json({ limit: "10mb" }))
 
-let latestData = {}
+// Receive frame from React dashboard
+app.post("/api/detect/frame", async (req, res) => {
 
-app.post("/crowd", (req,res)=>{
+  try {
 
-    latestData = req.body
+    const { imageBase64 } = req.body
 
-    console.log("AI Data:", latestData)
+    if (!imageBase64) {
+      return res.status(400).json({ error: "No image provided" })
+    }
 
-    res.json({status:"ok"})
+    // Remove base64 header
+    const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "")
+
+    const imagePath = path.join(__dirname, "frame.jpg")
+
+    // Save image
+    fs.writeFileSync(imagePath, base64Data, "base64")
+
+    // Run YOLO detection
+    const python = spawn("py", ["../ai-engine/detect.py", "--input", imagePath, "--json"], {
+      cwd: __dirname
+    })
+
+    let result = ""
+    let errOut = ""
+    let exitCode = null
+
+    python.stdout.on("data", (data) => {
+      result += data.toString()
+    })
+
+    python.stderr.on("data", (data) => {
+      errOut += data.toString()
+      console.error("Python error:", data.toString())
+    })
+
+    python.on("close", (code) => {
+      exitCode = code
+
+      try {
+
+        // Ultralytics sometimes prints non-JSON logs; parse the last JSON-looking line.
+        const lastJsonLine =
+          result
+            .split(/\r?\n/)
+            .map((l) => l.trim())
+            .filter(Boolean)
+            .reverse()
+            .find((l) => l.startsWith("{") && l.endsWith("}")) || ""
+
+        const json = JSON.parse(lastJsonLine)
+
+        res.json({
+          peopleCount: Number(json.people_count ?? 0),
+          litterCount: Number(json.litter_count ?? 0),
+          crowdLevel: String(json.crowd_level ?? "LOW").toUpperCase()
+        })
+
+      } catch (err) {
+
+        res.status(500).json({
+          error: "Could not parse YOLO output as JSON",
+          exitCode,
+          stdout: result.trim().slice(0, 2000),
+          stderr: errOut.trim().slice(0, 2000)
+        })
+
+      }
+
+    })
+
+  } catch (err) {
+
+    res.status(500).json({ error: "Detection failed" })
+
+  }
+
 })
 
-app.get("/crowd",(req,res)=>{
-    res.json(latestData)
-})
-
-app.listen(5000,()=>{
-    console.log("Server running on port 5000")
+app.listen(5000, () => {
+  console.log("UrbanEye backend running on port 5000")
 })

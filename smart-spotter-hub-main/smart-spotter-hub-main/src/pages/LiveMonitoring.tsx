@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Users, Activity, Maximize2 } from "lucide-react";
 import CrowdLevelBadge from "@/components/CrowdLevelBadge";
-import cameraFeed from "@/assets/camera-feed.jpg";
 
 const cameras = [
   { id: 1, name: "Marina Beach - North", count: 847, level: "high" as const, fps: 30 },
@@ -12,18 +11,106 @@ const cameras = [
   { id: 6, name: "VGP Universal Kingdom", count: 756, level: "high" as const, fps: 27 },
 ];
 
+type CrowdLevelUi = "low" | "medium" | "high";
+
 export default function LiveMonitoring() {
   const [activeCamera, setActiveCamera] = useState(0);
-  const [liveCount, setLiveCount] = useState(cameras[0].count);
+  const [peopleCount, setPeopleCount] = useState<number>(0);
+  const [litterCount, setLitterCount] = useState<number>(0);
+  const [crowdLevel, setCrowdLevel] = useState<CrowdLevelUi>("low");
+  const [isRunning, setIsRunning] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  const apiBaseUrl = useMemo(() => {
+    const fromEnv = (import.meta as any)?.env?.VITE_API_BASE_URL as string | undefined;
+    return (fromEnv || "http://localhost:5000").replace(/\/$/, "");
+  }, []);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setLiveCount((prev) => prev + Math.floor(Math.random() * 5) - 2);
-    }, 2000);
-    return () => clearInterval(interval);
+    let stream: MediaStream | null = null;
+    let cancelled = false;
+
+    async function startCamera() {
+      try {
+        setError("");
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        if (cancelled) return;
+        const video = videoRef.current;
+        if (!video) return;
+        video.srcObject = stream;
+        await video.play();
+        setIsRunning(true);
+      } catch (e: any) {
+        setError(e?.message || "Could not access camera");
+        setIsRunning(false);
+      }
+    }
+
+    startCamera();
+
+    return () => {
+      cancelled = true;
+      if (stream) stream.getTracks().forEach((t) => t.stop());
+    };
   }, [activeCamera]);
 
   const cam = cameras[activeCamera];
+
+  useEffect(() => {
+    if (!isRunning) return;
+
+    let timer: number | undefined;
+    let aborted = false;
+
+    async function tick() {
+      try {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        if (!video || !canvas) return;
+        if (video.videoWidth === 0 || video.videoHeight === 0) return;
+
+        const w = 640;
+        const h = 360;
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(video, 0, 0, w, h);
+
+        const imageBase64 = canvas.toDataURL("image/jpeg", 0.7);
+        const res = await fetch(`${apiBaseUrl}/api/detect/frame`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageBase64, cameraId: String(cam.id), cameraName: cam.name }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error || "Detection failed");
+
+        const p = Number(data?.peopleCount ?? 0);
+        const l = Number(data?.litterCount ?? 0);
+        const levelRaw = String(data?.crowdLevel ?? "LOW").toUpperCase();
+
+        setPeopleCount(p);
+        setLitterCount(l);
+        setCrowdLevel(levelRaw === "HIGH" ? "high" : levelRaw === "MEDIUM" ? "medium" : "low");
+        setError("");
+      } catch (e: any) {
+        setError(e?.message || "Detection error");
+      } finally {
+        if (!aborted) timer = window.setTimeout(tick, 2000);
+      }
+    }
+
+    timer = window.setTimeout(tick, 750);
+    return () => {
+      aborted = true;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [apiBaseUrl, cam.id, cam.name, isRunning]);
 
   return (
     <div className="space-y-6">
@@ -36,7 +123,13 @@ export default function LiveMonitoring() {
         {/* Main Feed */}
         <div className="lg:col-span-2 glass-card overflow-hidden">
           <div className="relative">
-            <img src={cameraFeed} alt="Live camera feed with AI detection" className="w-full aspect-video object-cover" />
+            <video
+              ref={videoRef}
+              playsInline
+              muted
+              className="w-full aspect-video object-cover bg-black"
+            />
+            <canvas ref={canvasRef} className="hidden" />
             <div className="absolute inset-0 scan-line pointer-events-none" />
             <div className="absolute top-3 left-3 flex items-center gap-2 bg-background/80 backdrop-blur px-3 py-1.5 rounded-lg">
               <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
@@ -49,9 +142,10 @@ export default function LiveMonitoring() {
             <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
               <div className="bg-background/80 backdrop-blur px-4 py-2 rounded-lg">
                 <p className="text-xs text-muted-foreground">Detected People</p>
-                <p className="text-2xl font-display font-bold text-primary">{liveCount}</p>
+                <p className="text-2xl font-display font-bold text-primary">{peopleCount}</p>
+                <p className="text-xs text-muted-foreground mt-1">Litter: {litterCount}</p>
               </div>
-              <CrowdLevelBadge level={cam.level} size="md" />
+              <CrowdLevelBadge level={crowdLevel} size="md" />
             </div>
           </div>
           <div className="p-4 flex items-center justify-between">
@@ -62,7 +156,7 @@ export default function LiveMonitoring() {
               </div>
               <div className="flex items-center gap-1.5">
                 <Activity className="w-4 h-4 text-success" />
-                <span className="text-xs text-muted-foreground">YOLO v8 Active</span>
+                <span className="text-xs text-muted-foreground">{error ? `Model error: ${error}` : "YOLO v8 Active"}</span>
               </div>
             </div>
             <button className="p-2 hover:bg-secondary rounded-lg transition-colors">
@@ -77,7 +171,7 @@ export default function LiveMonitoring() {
           {cameras.map((c, i) => (
             <button
               key={c.id}
-              onClick={() => { setActiveCamera(i); setLiveCount(c.count); }}
+              onClick={() => { setActiveCamera(i); setPeopleCount(0); setLitterCount(0); }}
               className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-all ${i === activeCamera ? "bg-primary/10 border border-primary/30" : "bg-secondary/50 hover:bg-secondary"}`}
             >
               <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center">
@@ -87,8 +181,8 @@ export default function LiveMonitoring() {
                 <p className="text-sm font-medium text-foreground truncate">{c.name}</p>
                 <div className="flex items-center gap-2 mt-0.5">
                   <Users className="w-3 h-3 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">{c.count}</span>
-                  <CrowdLevelBadge level={c.level} />
+                  <span className="text-xs text-muted-foreground">Live</span>
+                  <CrowdLevelBadge level={i === activeCamera ? crowdLevel : c.level} />
                 </div>
               </div>
             </button>
