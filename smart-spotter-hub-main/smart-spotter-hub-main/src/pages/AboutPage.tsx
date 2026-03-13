@@ -1,11 +1,11 @@
-import { Eye, Brain, BarChart3, Camera, Mail, Github, Linkedin } from "lucide-react";
+import { Eye, Brain, BarChart3, Camera, Mail } from "lucide-react";
 import { teamMembers } from "@/data/mockData";
 
 const techStack = [
   { category: "Frontend", items: ["React", "TailwindCSS", "Recharts"] },
   { category: "AI / ML", items: ["YOLOv8", "TensorFlow", "Scikit-learn", "OpenCV"] },
   { category: "Backend", items: ["Node.js", "FastAPI", "MongoDB"] },
-  { category: "APIs", items: ["Google Maps API", "Weather API"] },
+  { category: "APIs", items: ["Google Maps API", "Google Places API"] },
 ];
 
 export default function AboutPage() {
@@ -81,13 +81,7 @@ export default function AboutPage() {
         <h2 className="font-display text-xl font-semibold text-foreground mb-4">Contact</h2>
         <div className="flex flex-wrap gap-4">
           <a href="#" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-foreground text-sm hover:bg-primary/10 transition-colors">
-            <Mail className="w-4 h-4" /> urbaneye@hackathon.dev
-          </a>
-          <a href="#" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-foreground text-sm hover:bg-primary/10 transition-colors">
-            <Github className="w-4 h-4" /> GitHub
-          </a>
-          <a href="#" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-foreground text-sm hover:bg-primary/10 transition-colors">
-            <Linkedin className="w-4 h-4" /> LinkedIn
+            <Mail className="w-4 h-4" /> waylenbarreto@gmail.com
           </a>
         </div>
       </div>

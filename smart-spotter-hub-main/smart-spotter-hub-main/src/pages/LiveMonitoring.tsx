@@ -38,11 +38,23 @@ export default function LiveMonitoring() {
     async function startCamera() {
       try {
         setError("");
-        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        });
         if (cancelled) return;
         const video = videoRef.current;
         if (!video) return;
         video.srcObject = stream;
+        // Some browsers will render a black frame until metadata is available.
+        await new Promise<void>((resolve) => {
+          const done = () => resolve();
+          if (video.readyState >= 1) return done();
+          video.onloadedmetadata = () => done();
+        });
         await video.play();
         setIsRunning(true);
       } catch (e: any) {
@@ -56,6 +68,8 @@ export default function LiveMonitoring() {
     return () => {
       cancelled = true;
       if (stream) stream.getTracks().forEach((t) => t.stop());
+      const video = videoRef.current;
+      if (video) video.srcObject = null;
     };
   }, [activeCamera]);
 
@@ -95,6 +109,8 @@ export default function LiveMonitoring() {
         const p = Number(data?.peopleCount ?? 0);
         const l = Number(data?.litterCount ?? 0);
         const levelRaw = String(data?.crowdLevel ?? "LOW").toUpperCase();
+        const suspiciousActivity = Boolean(data?.suspiciousActivity ?? false);
+        const hypermovement = Boolean(data?.hypermovement ?? false);
 
         const uiLevel: CrowdLevelUi = levelRaw === "HIGH" ? "high" : levelRaw === "MEDIUM" ? "medium" : "low";
 
@@ -109,6 +125,8 @@ export default function LiveMonitoring() {
           peopleCount: p,
           litterCount: l,
           crowdLevel: levelRaw as any,
+          suspiciousActivity,
+          hypermovement,
         });
 
         setError("");
@@ -139,6 +157,7 @@ export default function LiveMonitoring() {
           <div className="relative">
             <video
               ref={videoRef}
+              autoPlay
               playsInline
               muted
               className="w-full aspect-video object-cover bg-black"

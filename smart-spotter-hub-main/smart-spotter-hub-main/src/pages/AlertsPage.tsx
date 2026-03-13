@@ -11,10 +11,26 @@ export default function AlertsPage() {
     () =>
       events.slice(0, 20).map((e) => ({
         id: e.id,
-        type: e.litterCount >= 1 ? "cleanliness" : "crowd" as const,
-        severity: e.crowdLevel === "HIGH" || e.litterCount >= 3 ? "high" as const : e.crowdLevel === "MEDIUM" ? "medium" as const : "low" as const,
+        type:
+          e.suspiciousActivity || e.hypermovement
+            ? ("safety" as const)
+            : e.litterCount >= 1
+            ? ("cleanliness" as const)
+            : ("crowd" as const),
+        severity:
+          e.suspiciousActivity || e.hypermovement
+            ? ("high" as const)
+            : e.crowdLevel === "HIGH" || e.litterCount >= 3
+            ? ("high" as const)
+            : e.crowdLevel === "MEDIUM"
+            ? ("medium" as const)
+            : ("low" as const),
         message:
-          e.litterCount >= 1
+          e.suspiciousActivity || e.hypermovement
+            ? e.hypermovement
+              ? `Hypermovement detected at ${e.cameraName}`
+              : `Suspicious activity detected at ${e.cameraName}`
+            : e.litterCount >= 1
             ? `${e.litterCount} litter item(s) detected at ${e.cameraName}`
             : `Crowd level ${e.crowdLevel} at ${e.cameraName}`,
         locationName: e.cameraName,

@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from "react";
 import { Users, TrendingUp, Eye, MapPin, AlertTriangle, Activity } from "lucide-react";
 import StatCard from "@/components/StatCard";
 import CrowdLevelBadge from "@/components/CrowdLevelBadge";
@@ -5,6 +6,52 @@ import { locations, weeklyTrends, alerts } from "@/data/mockData";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 export default function DashboardOverview() {
+
+  const [totalVisitors, setTotalVisitors] = useState<number | null>(null);
+  const [hourlyVisitors, setHourlyVisitors] = useState<{ label: string; visitors: number }[]>([]);
+
+  const apiBaseUrl = useMemo(() => {
+    const fromEnv = (import.meta as any)?.env?.VITE_API_BASE_URL as string | undefined;
+    return (fromEnv || "http://localhost:5000").replace(/\/$/, "");
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSummary() {
+      try {
+        const res = await fetch(`${apiBaseUrl}/api/analytics/summary`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+
+        const totalPeople = Number(data.totalPeople ?? 0);
+        setTotalVisitors(totalPeople);
+
+        if (Array.isArray(data.hourly)) {
+          setHourlyVisitors(
+            data.hourly.map((h: any) => ({
+              label: `${h._id}:00`,
+              visitors: Number(h.totalPeople ?? 0),
+            }))
+          );
+        }
+      } catch {
+        // fall back to mock data
+      }
+    }
+
+    loadSummary();
+    const id = window.setInterval(loadSummary, 30_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [apiBaseUrl]);
+
+  const weeklyChartData = hourlyVisitors.length
+    ? hourlyVisitors
+    : weeklyTrends.map((d) => ({ label: d.day, visitors: d.visitors }));
   return (
     <div className="space-y-6">
       <div>
@@ -14,21 +61,27 @@ export default function DashboardOverview() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Visitors" value="5,390" change="+12% from yesterday" changeType="positive" icon={Users} />
+        <StatCard
+          title="Total Visitors (today)"
+          value={totalVisitors != null ? totalVisitors.toLocaleString() : "5,390"}
+          change="+12% from yesterday"
+          changeType="positive"
+          icon={Users}
+        />
         <StatCard title="Avg Density" value="62%" change="Medium level" changeType="neutral" icon={Activity} />
         <StatCard title="Active Cameras" value="6" icon={Eye} iconColor="text-success" />
         <StatCard title="Active Alerts" value={alerts.filter(a => !a.resolved).length} icon={AlertTriangle} iconColor="text-warning" />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Weekly Chart */}
+        {/* Visitor Chart */}
         <div className="lg:col-span-2 glass-card p-5">
-          <h3 className="font-display font-semibold text-foreground mb-4">Weekly Visitor Trends</h3>
+          <h3 className="font-display font-semibold text-foreground mb-4">Visitor Trends</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weeklyTrends}>
+              <BarChart data={weeklyChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 20% 18%)" />
-                <XAxis dataKey="day" stroke="hsl(215 20% 55%)" fontSize={12} />
+                <XAxis dataKey="label" stroke="hsl(215 20% 55%)" fontSize={12} />
                 <YAxis stroke="hsl(215 20% 55%)" fontSize={12} />
                 <Tooltip
                   contentStyle={{ background: "hsl(220 25% 10%)", border: "1px solid hsl(220 20% 18%)", borderRadius: 8, color: "hsl(210 40% 93%)" }}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Users, TrendingUp, Clock, Activity } from "lucide-react";
-import { weeklyTrends as mockWeekly, monthlyData } from "@/data/mockData";
+import { monthlyData } from "@/data/mockData";
 import StatCard from "@/components/StatCard";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { useDetections } from "@/context/DetectionContext";
@@ -28,6 +28,10 @@ export default function AnalyticsDashboard() {
     peakHour: number | null;
   } | null>(null);
 
+  const [hourly, setHourly] = useState<
+    { hour: number; totalPeople: number; totalLitter: number; detections: number }[]
+  >([]);
+
   const apiBaseUrl = useMemo(() => {
     const fromEnv = (import.meta as any)?.env?.VITE_API_BASE_URL as string | undefined;
     return (fromEnv || "http://localhost:5000").replace(/\/$/, "");
@@ -51,6 +55,16 @@ export default function AnalyticsDashboard() {
             cleanlinessScore: data.cleanlinessScore ?? 100,
             peakHour: data.peakHour ?? null,
           });
+          setHourly(
+            Array.isArray(data.hourly)
+              ? data.hourly.map((h: any) => ({
+                  hour: h._id,
+                  totalPeople: h.totalPeople ?? 0,
+                  totalLitter: h.totalLitter ?? 0,
+                  detections: h.detections ?? 0,
+                }))
+              : []
+          );
         }
       } catch {
         // ignore – keep mock metrics if backend not available
@@ -76,6 +90,18 @@ export default function AnalyticsDashboard() {
       ? Math.round(totalPeople / events.length)
       : 0;
 
+  const hourlyDensity = useMemo(
+    () =>
+      hourly.map((h) => ({
+        hourLabel: `${h.hour}:00`,
+        avgDensity:
+          totalPeople > 0
+            ? Math.min(100, (h.totalPeople / Math.max(1, totalPeople)) * 100)
+            : 0,
+      })),
+    [hourly, totalPeople]
+  );
+
   const peakHourLabel = useMemo(() => {
     if (summary?.peakHour == null) return "—";
     const hour = summary.peakHour;
@@ -83,11 +109,6 @@ export default function AnalyticsDashboard() {
     const hour12 = ((hour + 11) % 12) + 1;
     return `${hour12} ${period}`;
   }, [summary?.peakHour]);
-
-  const weeklyTrends = mockWeekly.map((d, idx) => {
-    const factor = events.length === 0 ? 1 : 0.8 + (idx / mockWeekly.length) * 0.4;
-    return { ...d, avgDensity: Math.min(100, d.avgDensity * factor) };
-  });
 
   return (
     <div className="space-y-6">
@@ -136,14 +157,14 @@ export default function AnalyticsDashboard() {
         </div>
       </div>
 
-      {/* Weekly density */}
+      {/* Hourly density (live from DB) */}
       <div className="glass-card p-5">
-        <h3 className="font-display font-semibold text-foreground mb-4">Weekly Crowd Density</h3>
+        <h3 className="font-display font-semibold text-foreground mb-4">Today&apos;s Crowd Density by Hour</h3>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={weeklyTrends}>
+          <LineChart data={hourlyDensity}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 20% 18%)" />
-              <XAxis dataKey="day" stroke="hsl(215 20% 55%)" fontSize={11} />
+              <XAxis dataKey="hourLabel" stroke="hsl(215 20% 55%)" fontSize={11} />
               <YAxis stroke="hsl(215 20% 55%)" fontSize={11} domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
               <Tooltip contentStyle={{ background: "hsl(220 25% 10%)", border: "1px solid hsl(220 20% 18%)", borderRadius: 8, color: "hsl(210 40% 93%)" }} />
               <Line type="monotone" dataKey="avgDensity" stroke="hsl(38 92% 50%)" strokeWidth={2} dot={{ fill: "hsl(38 92% 50%)" }} />

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { locations, hourlyPredictions } from "@/data/mockData";
+import { locations } from "@/data/mockData";
 import CrowdLevelBadge from "@/components/CrowdLevelBadge";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, AreaChart, Area } from "recharts";
 import { Brain, TrendingUp, Clock, Target } from "lucide-react";
@@ -14,6 +14,7 @@ type AnalyticsSummary = {
 
 export default function PredictionDashboard() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
+  const [hourly, setHourly] = useState<{ hour: number; totalPeople: number }[]>([]);
 
   const apiBaseUrl = useMemo(() => {
     const fromEnv = (import.meta as any)?.env?.VITE_API_BASE_URL as string | undefined;
@@ -35,6 +36,14 @@ export default function PredictionDashboard() {
             predictedMax: data.predictedMax ?? 0,
             modelAccuracyPercent: data.modelAccuracyPercent ?? null,
           });
+          setHourly(
+            Array.isArray(data.hourly)
+              ? data.hourly.map((h: any) => ({
+                  hour: h._id,
+                  totalPeople: h.totalPeople ?? 0,
+                }))
+              : []
+          );
         }
       } catch {
         // ignore – keep mock metrics if backend not available
@@ -62,6 +71,16 @@ export default function PredictionDashboard() {
 
   const predictedMaxLabel = summary?.predictedMax ? summary.predictedMax.toLocaleString() : "—";
 
+  const chartData = useMemo(
+    () =>
+      hourly.map((h) => ({
+        hour: `${h.hour}:00`,
+        predicted: h.totalPeople,
+        actual: h.totalPeople,
+      })),
+    [hourly]
+  );
+
   return (
     <div className="space-y-6">
       <div>
@@ -81,7 +100,7 @@ export default function PredictionDashboard() {
         <h3 className="font-display font-semibold text-foreground mb-4">Hourly Crowd Prediction — Marina Beach</h3>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={hourlyPredictions}>
+            <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="predGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="hsl(174 72% 46%)" stopOpacity={0.3} />

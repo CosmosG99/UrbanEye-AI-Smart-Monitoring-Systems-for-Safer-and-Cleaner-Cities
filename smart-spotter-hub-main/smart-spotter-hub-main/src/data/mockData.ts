@@ -95,8 +95,8 @@ export const monthlyData = [
 ];
 
 export const teamMembers = [
-  { name: "Arjun Sharma", role: "Project Lead & ML Engineer", avatar: "AS" },
-  { name: "Priya Nair", role: "Frontend Developer", avatar: "PN" },
-  { name: "Rahul Kumar", role: "Backend Developer", avatar: "RK" },
-  { name: "Sneha Reddy", role: "Data Scientist", avatar: "SR" },
+  { name: "Waylen Barreto", role: "Project Lead & ML Engineer", avatar: "WB" },
+  { name: "Geetesh Naik", role: "Frontend Developer", avatar: "GN" },
+  { name: "Amey Kapdi", role: "Backend Developer", avatar: "AK" },
+  { name: "User", role: "Contributor", avatar: "U" },
 ];

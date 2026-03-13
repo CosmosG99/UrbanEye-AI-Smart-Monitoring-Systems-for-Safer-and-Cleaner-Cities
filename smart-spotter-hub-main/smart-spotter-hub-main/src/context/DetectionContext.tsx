@@ -11,6 +11,8 @@ export type DetectionEvent = {
   peopleCount: number;
   litterCount: number;
   crowdLevel: CrowdLevel;
+  suspiciousActivity?: boolean;
+  hypermovement?: boolean;
 };
 
 type DetectionContextValue = {
@@ -43,6 +45,15 @@ export function DetectionProvider({ children }: { children: React.ReactNode }) {
           if (next.peopleCount >= 1 && next.crowdLevel !== "LOW") {
             toast("High crowd level", {
               description: `Crowd level ${next.crowdLevel} at ${next.cameraName}`,
+              position: "top-left",
+            });
+          }
+
+          if (next.hypermovement || next.suspiciousActivity) {
+            toast("Security alert", {
+              description: next.hypermovement
+                ? `Hypermovement detected at ${next.cameraName}`
+                : `Suspicious activity detected at ${next.cameraName}`,
               position: "top-left",
             });
           }
