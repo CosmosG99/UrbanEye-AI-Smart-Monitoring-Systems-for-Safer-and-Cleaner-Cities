@@ -123,6 +123,7 @@ TailwindCSS
 Chart.js / Recharts
 
 Google Maps API
+Places API
 
 ⚙️ Backend
 
@@ -146,7 +147,7 @@ MongoDB
 
 Google Maps API
 
-Weather API (used for improving crowd prediction)
+Places API 
 
 🧠 AI Components
 
@@ -225,3 +226,13 @@ Possible future extensions:
 🚦 Real-time traffic integration
 📱 Tourist mobile application
 📅 Event-based crowd forecasting
+
+Chatbot:
+Using Gemini API key 
+Reads real-time data from Database
+Gives updates about Littering and Suspicious Activity
+
+Grahps:
+Real-time graphs and historical graphs
+Using data from database
+
